@@ -10,9 +10,18 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
+BUFFER_DIR = 'tmp'
+BUFFER_SIZE = 10_000
 
-def dump_buffer(data):
-    buffer_filename = 'tmp/' + str(time.time())
+
+def dump_buffer(data: list) -> str:
+    """Dump array of lines to text file.
+    All files will be saved into temporary directory.
+
+    :param data: Input list
+    :return: Filename
+    """
+    buffer_filename = BUFFER_DIR + '/' + str(time.time())
 
     with open(buffer_filename, 'w+') as f:
         for line in data:
@@ -22,12 +31,16 @@ def dump_buffer(data):
 
 
 def prepare_buffers(file_to_sort: str) -> list:
-    buffers = []
+    """Split big text file into limited size buffers.
+    Simply read big file line by line.
+    Single file contains BUFFER_SIZE lines.
 
-    buffer_size = 2
-    buffer_data = []
-
+    :param file_to_sort: large text file name
+    :return: list of buffer file names
+    """
     count = 0
+    buffers = []
+    buffer_data = []
 
     with open(file_to_sort, 'r') as f:
         while True:
@@ -39,7 +52,7 @@ def prepare_buffers(file_to_sort: str) -> list:
 
             buffer_data.append(line)
 
-            if count % buffer_size == 0:
+            if count % BUFFER_SIZE == 0:
                 buffer_data.sort()
                 buffer_filename = dump_buffer(buffer_data)
                 buffer_data = []
@@ -54,7 +67,13 @@ def prepare_buffers(file_to_sort: str) -> list:
 
 
 def merge_files(file1: str, file2: str) -> str:
-    output = 'tmp/' + str(time.time())
+    """Merge 2 sorted buffer files into one.
+
+    :param file1:
+    :param file2:
+    :return:
+    """
+    output = BUFFER_DIR + '/' + str(time.time())
     res = open(output, 'w+')
     buffer1 = open(file1, 'r')
     buffer2 = open(file2, 'r')
@@ -93,10 +112,16 @@ def merge_files(file1: str, file2: str) -> str:
 
 
 def external_merge_sort(file_to_sort: str) -> str:
-    if not os.path.exists('tmp'):
-        os.makedirs('tmp')
+    """Main sorting method.
+    Merge prepared buffers into single text file.
 
-    sorted_file = 'merge_sorted_' + file_to_sort
+    :param file_to_sort:
+    :return:
+    """
+    if not os.path.exists(BUFFER_DIR):
+        os.makedirs(BUFFER_DIR)
+
+    sorted_file = 'sorted_' + file_to_sort
     buffers = prepare_buffers(file_to_sort)
 
     start_buff_cnt = len(buffers)
@@ -108,19 +133,26 @@ def external_merge_sort(file_to_sort: str) -> str:
 
     os.rename(buffers[-1], sorted_file)
 
-    if os.path.exists('tmp'):
-        os.rmdir('tmp')
+    if os.path.exists(BUFFER_DIR):
+        os.rmdir(BUFFER_DIR)
+
     return sorted_file
 
 
 class FileHandler:
     filename: str
-    chunk_size: int = 2
 
-    def __init__(self, filename='default.txt'):
+    def __init__(self, filename: str = 'default.txt'):
         self.filename = filename
 
-    def generate_file(self, num_lines: int = 50, max_len: int = 50, force: bool = False):
+    def generate_file(self, num_lines: int = 50, max_len: int = 50, force: bool = False) -> str:
+        """Generate text file by number of lines and lines length.
+
+        :param num_lines:
+        :param max_len:
+        :param force:
+        :return: generated file name
+        """
         if os.path.isfile(self.filename) and not force:
             logging.warning('File %s already exist. Generation skipped.', self.filename)
             return self.filename
@@ -129,16 +161,21 @@ class FileHandler:
             for _ in range(num_lines):
                 f.write(''.join(random.choice(string.ascii_lowercase) for i in range(max_len)) + '\n')
 
-        logging.info('File %s generated.', self.filename)
+        logging.info('File %s generated (%d lines %d symbols length each).', self.filename, num_lines, max_len)
         return self.filename
 
-    def sort(self):
+    def sort(self) -> str:
+        """Sort large text file.
+        In this current case external merge sort used.
+
+        :return: sorted file name
+        """
         return external_merge_sort(self.filename)
 
 
 if __name__ == '__main__':
-    file = FileHandler('test.txt')
-    file.generate_file(num_lines=1_000, max_len=10)
+    file = FileHandler('file.txt')
+    file.generate_file(num_lines=1_000_000, max_len=100)
 
     start = time.time()
     sorted_filepath = file.sort()
