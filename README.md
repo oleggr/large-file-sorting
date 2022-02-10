@@ -11,7 +11,7 @@ Simply run below command:
 python3 sorter.py
 ```
 
-Application uses standard libraries.
+Application uses standard libraries so you don't need to install any requirements.
 
 On first run app will generate large text file `test.txt`. 
 You can specify it's size by changing number of lines and line length. 
